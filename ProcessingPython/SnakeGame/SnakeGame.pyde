@@ -7,8 +7,9 @@
 #5.0 Periodic boundary conditions, hit detection on body and tail
 #Errors: not detecting tail length <1 (game states needed), need periodic boundary conditions
 #6.0 Game states implemented, added enemies play zone defence to prevent clustering
-#7.0 Sounds using minim
-# (16.5/22)
+#7.0 Tweaks to AI and item resetting
+#8.0 New power up, speed boost
+# (15.5/22)
 # (    12 /12)
 # Critical Requirements 
 # ++++On Time
@@ -20,9 +21,9 @@
 # ++Documentation and proper header
 # +Progression
 
-# 4.5/10(any combrination of 10) Optional requirements
+# 3.5/10(any combrination of 10) Optional requirements
 # +PVectors
-# +Sounds
+# -Sounds
 # -Background music
 # -Pause
 # -Mute sounds
@@ -57,24 +58,29 @@ def setup():
 state = 0#game state
             
 def initialize():
-    global pPos, pSize, ePos, eSize, speed, score, numItems
-    global iBool, iPos, iSize, numEnemies , eHome, eBool, eSpeed
+    global pPos, pSize, ePos, eSize, speed, score, numItems, startingItems
+    global iBool, iPos, iSize, iType,numEnemies , eHome, eBool, eSpeed
 
     #item variables++++++++++++++++++++++++++
-    numItems = 20
+    numItems = 10
+    startingItems = 6
+    numEnemies = 1
     iPos = []
     iSize = []
     iBool = []
+
+    iType = []
     
     #Enemy variables ++++++++++++++++++++++++
     
-    numEnemies = 4
+    
     ePos = []
     eHome = [] #used to prevent enemy clustering 
     eSize = []
     eBool = [] #not used currently
-    eSpeed = 4
+    eSpeed = 3
     
+    addEnemy(numEnemies -1)
                                                                                                 
     score = 0
 
@@ -89,20 +95,25 @@ def initialize():
     for i in range(0,numItems):
         iPos.append(PVector(random(50,750),random(50,750)))#item position
         iSize.append(PVector(15,15))#item size
-        iBool.append(False)
-
-    #set the item list    
-    for i in range (0,numEnemies):
-        ePos.append(PVector(random(15,50),random(14,50)))#Enemy starting position
-        eHome.append(PVector((i%2+0.5)*400,(i/2+0.5)*400))
-      #  print eHome
-        eSize.append(PVector(20,20))#enemy Size
-        eBool.append(False)
-
-
+        iType.append(int(random(0, 7))) #0 to 3 - food, 4 speed boost, 5 slow, 6 switch state
         
-                
-                                
+
+def addEnemy(i):
+    global numEnemies, ePos, eHome, eSize, eBool
+    ePos.append(PVector(random(15,50),random(14,50)))#Enemy starting position
+    if (i > 2):
+        eHome.append(PVector((i%2+0.5)*400,(i/2+0.5)*400))
+    elif (i == 2):
+        eHome.append(PVector(400,400))
+        
+    elif (i == 0):
+        eHome.append(PVector(4000,4000))
+    elif (i == 1):
+        eHome.append(PVector(-4000,4000))
+            
+#  #print eHome
+    eSize.append(PVector(20,20))#enemy Size
+    eBool.append(False)             
 
 pVel = PVector()
 pDir = PVector()
@@ -111,22 +122,30 @@ defence = 10.0
 
 pCol = color(255,0,0)
 
-
-iCol = color(50,150,200)
+iCol = []
+for i in range(0, 4):
+    iCol.append( color(150,250,150))#food
+iCol.append(color(50,150,250))#speed up
+iCol.append(color(50,150,50))#slow
+iCol.append(color(250,50, 250))
     
 eCol = color(0,0,250)        
 
-
-
-
 def resetBlocks():
-    global iPos, iSize, iBool, numItems
-    numItems = 20
+    #print "resetBlocks"
+    global iPos, iSize, iType, numItems, startingItems, numEnemies, eSpeed
+    startingItems +=2
+    numItems = startingItems
+    numEnemies +=1
+    eSpeed += 0.1
+    addEnemy(numEnemies-1)
     iPos = []
     iSize = []
+    iType = []
     for i in range(0,numItems):
         iPos.append(PVector(random(50,750),random(50,750)))#player position
         iSize.append(PVector(15,15))
+        iType.append(int(random(0, 7))) #0 to 3 - food, 4 speed boost, 5 slow
 
 #iVel = PVector()
 #iDir = PVector()
@@ -148,7 +167,7 @@ def keyPressed():
         if key == ' ':
             state = 1
     elif state == 1:
-   # print keyCode
+   # #print keyCode
         if (keyCode == UP):
             pVel.set(PVector(0,-1.))
         elif (keyCode == DOWN):
@@ -168,7 +187,7 @@ def keyPressed():
             state = 1 
         
 def detectHit(p1,p2,s1,s2):
-   # print p1, p2, s1, s2
+   # #print p1, p2, s1, s2
     if abs(p1.x-p2.x)<(s1.x+s2.x)/2 and abs(p1.y-p2.y)<(s1.y+s2.y)/2:
         return True
     return False
@@ -181,6 +200,7 @@ def detectHit(p1,p2,s1,s2):
   #      pVelX.set(0,0)
 
 def updatePos(pos, siz):
+    #print "updatePos"
     #check periodic boundary conditions
     
     #
@@ -188,12 +208,13 @@ def updatePos(pos, siz):
     #segment the position of the one close to the head
     
     for i in range(1 , len(pos)):
-#        print i
+#        #print i
         #we start at the end and the i value moves us toward the head
         pos[len(pos) -i ].set(pos[len(pos) -i-1].x, pos[len(pos) - i-1].y)
         
               
 def checkBounds(pos, siz):
+    #print "checkBounds"
     if (pos.x > width - siz.x/2):
         pos.x = siz.x/2
     elif pos.x < siz.x/2:
@@ -206,7 +227,8 @@ def checkBounds(pos, siz):
 
 
 def enemyMove():
-    global ePos, pPos, eSpeed, state
+    #print "enemyMove"
+    global ePos, pPos, eSpeed, state, numEnemies
 
     #move the enemies towards the head of the snake (for now)
     for i in range (0, len(ePos)):
@@ -214,8 +236,9 @@ def enemyMove():
             state = 2
             return
         eVel = PVector.sub(eHome[i], ePos[i])
+        eVel.normalize()
         eVel.mult(0.1)
-        if (PVector.dist(pPos[0], ePos[i]) <=width/2):
+        if (PVector.dist(pPos[0], ePos[i]) <=int(1.3*width/numEnemies)):
             #seek the snake if it is close
             eVel.add(PVector.sub(pPos[0], ePos[i]))
         
@@ -225,6 +248,7 @@ def enemyMove():
         ePos[i].add(eVel)
 
 def enemyCheck():
+   # #print " enemyCheck in"
     global ePos, pPos, pSize, eSize, state
     #check to see if any of the tail is in contact with the enemy
     #check only every 2nd frame to prevent insta-death
@@ -244,7 +268,8 @@ def enemyCheck():
                 return
 
 def drawStuff():
-    global pCol, pPos, pSize, eCol, eSize, ePos, eBool, score, iCol, iSize, iPos, iBool
+    #print "drawStuff"
+    global pCol, pPos, pSize, eCol, eSize, ePos, eBool, score, iCol, iSize, iPos, iType, iCol
 #draw the player
     fill(pCol)
     
@@ -252,10 +277,7 @@ def drawStuff():
         rect(pPos[i].x, pPos[i].y, pSize[i].x, pSize[i].y, 10)
 #    rect(pPos[0].x, pPos[0].y, pSize[0].x, pSize[0].y, 10)   
 
-#draw items
-    fill(iCol)    
-    for i in range(0,len(iPos)):
-        rect (iPos[i].x,iPos[i].y,iSize[i].x,iSize[i].y, 5);
+
     
     #draw enemies
     fill(eCol)    
@@ -264,11 +286,50 @@ def drawStuff():
             rect (ePos[i].x,ePos[i].y,eSize[i].x,eSize[i].y, 5);
 
     text(int(score),50,100)                 
-                            
-                                            
-                                                                
-                                                                                                
+#draw items
+    if len(iPos) < 1:
+        return
+    #print str(len(iPos))+", "+str(numItems)
+    for i in range(0,numItems):
+        fill(iCol[iType[i]]) 
+        rect (iPos[i].x,iPos[i].y,iSize[i].x,iSize[i].y, 5);
+    #print "drawStuff end"    
+                        
+def checkItems():                                            
+    global iPos, numItems, pSize, iSize, pPos, iType, score, speed    
+            
+    for i in range(0,len(iPos)):
+        if i >= numItems:
+            break
+        if  detectHit(pPos[0], iPos[i], pSize[0], iSize[i]):
+            numItems -=1
+            score +=1
+            if iType[i] < 4: #food grows the body
+                pPos.append(PVector(pPos[len(pPos)-1].x-pVel.x,pPos[len(pPos)-1].y-pVel.y))
+                pSize.append(pSize[0]/0.95)
+                for j in range (1, len(pSize)):
+                    pSize[j].set(pSize[j-1].x*0.95,pSize[j-1].y*0.95) 
+            elif iType[i] == 4:
+                speed *=1.01
+            elif iType[i] == 5:
+                speed /= 1.01
+            elif iType[i] == 6:
+              #  print "inside 6"
+                for j in range(0, len(iType)):
+               #     print str(j)+","+str(iType[j])
+                    if iType[j] == 4:
+                        iType[j] = 5
+                    elif iType[j] == 5:
+                        iType[j] = 4
+                                                                              
+            iPos.remove(iPos[i])
+            iSize.remove(iSize[i])
+            iType.remove(iType[i])
+
+                                                                                            
 def draw():
+    #print "Draw start"
+
     global pPos, pVel, pVelX, pVelY, pSize, bPos, bSize,pCol, speed, numItems, score, state
     background(200)
 
@@ -285,7 +346,7 @@ def draw():
     #   pVel.add(pVelY)
         pVel.normalize()
         pVel.mult(speed)
-    
+   #     print speed    
     #from brick example        
     #    if int(frameRate) % 60 == 0:
     #        addBrick()
@@ -298,22 +359,13 @@ def draw():
         checkBounds(pPos[0], pSize[0]);
         
         #check the items
-        for i in range(0,len(iPos)):
-            if i >= numItems:
-                break
-            if  detectHit(pPos[0], iPos[i], pSize[0], iSize[i]):
-                iPos.remove(iPos[i])
-                iSize.remove(iSize[i])
-                numItems -=1
-                score +=1
-                pPos.append(PVector(pPos[len(pPos)-1].x-pVel.x,pPos[len(pPos)-1].y-pVel.y))
-                pSize.append(pSize[0]/0.95)
-                for j in range (1, len(pSize)):
-                    pSize[j].set(pSize[j-1].x*0.95,pSize[j-1].y*0.95)
-  #      print numItems    
+        checkItems()
+
+
+  #      #print numItems    
         if numItems < 1:
             resetBlocks()
-            print "WTF"
+            #print "WTF"
         enemyCheck()
         
         
