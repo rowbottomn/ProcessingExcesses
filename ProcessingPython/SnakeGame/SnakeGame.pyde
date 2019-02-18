@@ -9,38 +9,42 @@
 #6.0 Game states implemented, added enemies play zone defence to prevent clustering
 #7.0 Tweaks to AI and item resetting
 #8.0 New power up, speed boost
-# (15.5/22)
+#9.0 Switch item, advanced enemy strategy, tweaking of difficulty, pause function
+# (19/22)
 # (    12 /12)
 # Critical Requirements 
 # ++++On Time
 # +Program has player controlled by keys
 # +Enemy chases player
 # +Player can pick up items
-# +-Multiple types of items (Points, time, health) 
+# ++Multiple types of items (Points, time, health) 
 # +Some kind of end states are reached
 # ++Documentation and proper header
 # +Progression
 
-# 3.5/10(any combrination of 10) Optional requirements
+# 7/10(any combrination of 10) Optional requirements
 # +PVectors
 # -Sounds
 # -Background music
-# -Pause
+# +Pause
 # -Mute sounds
 # ~Start screen
-# -Variety of enemies
-# -Variety of items
+# ~Variety of enemies
+# +Variety of items
+#4 items types
 # -Animation
 # -PImage array
 # -Bonuses
-# -Upgrades
-# ++**Magical items of an impressive quality 
+# ~Upgrades 
+#speed upgrade, 
+# +++*Magical items of an impressive quality 
 # Tail of snake gets larger from eating food
 # AI prevents clustering
+# Effort spent on AI progression 
 
 def setup():
     
-    size(800,800)
+    size(800,780)
     rectMode(CENTER)
     stroke(200,50,100)
     strokeWeight(5)
@@ -56,6 +60,7 @@ def setup():
 #bSize = PVector (40,20)
 #game constants++++++++++++++++++++++++++++
 state = 0#game state
+paused = False
             
 def initialize():
     global pPos, pSize, ePos, eSize, speed, score, numItems, startingItems
@@ -162,12 +167,15 @@ def addBrick():
     #Add the position vector to the list
 
 def keyPressed():
-    global pVel, pVelX, pVelY, pDir, state
+    global pVel, pVelX, pVelY, pDir, state, paused
     if state == 0:
         if key == ' ':
             state = 1
     elif state == 1:
    # #print keyCode
+        if key == ' ':
+            paused = not paused
+
         if (keyCode == UP):
             pVel.set(PVector(0,-1.))
         elif (keyCode == DOWN):
@@ -238,6 +246,9 @@ def enemyMove():
         eVel = PVector.sub(eHome[i], ePos[i])
         eVel.normalize()
         eVel.mult(0.1)
+        fill(200,200,0,50);
+        searchRange = 1.3*width/numEnemies
+        ellipse(ePos[i].x,ePos[i].y, searchRange, searchRange);
         if (PVector.dist(pPos[0], ePos[i]) <=int(1.3*width/numEnemies)):
             #seek the snake if it is close
             eVel.add(PVector.sub(pPos[0], ePos[i]))
@@ -330,7 +341,7 @@ def checkItems():
 def draw():
     #print "Draw start"
 
-    global pPos, pVel, pVelX, pVelY, pSize, bPos, bSize,pCol, speed, numItems, score, state
+    global pPos, pVel, pVelX, pVelY, pSize, bPos, bSize,pCol, speed, numItems, score, state, paused
     background(200)
 
     if state == 0:
@@ -340,37 +351,39 @@ def draw():
         text("Snake Game!", x,100)
         
         text("press start to continue",100,300)
-    elif state == 1:    
-        updatePos(pPos, pSize)
-    #  pVel.add(pVelX)
-    #   pVel.add(pVelY)
-        pVel.normalize()
-        pVel.mult(speed)
-   #     print speed    
-    #from brick example        
-    #    if int(frameRate) % 60 == 0:
-    #        addBrick()
-        enemyMove()
-        if state == 2:
-            return
-
-        pPos[0].add(pVel)
+    elif state == 1:
+        if paused == False:    
+            updatePos(pPos, pSize)
+        #  pVel.add(pVelX)
+        #   pVel.add(pVelY)
+            pVel.normalize()
+            pVel.mult(speed)
+    #     print speed    
+        #from brick example        
+        #    if int(frameRate) % 60 == 0:
+        #        addBrick()
+            enemyMove()
+            if state == 2:
+                return
     
-        checkBounds(pPos[0], pSize[0]);
+            pPos[0].add(pVel)
         
-        #check the items
-        checkItems()
-
-
-  #      #print numItems    
-        if numItems < 1:
-            resetBlocks()
-            #print "WTF"
-        enemyCheck()
-        
+            checkBounds(pPos[0], pSize[0]);
+            
+            #check the items
+            checkItems()
+    
+    
+    #      #print numItems    
+            if numItems < 1:
+                resetBlocks()
+                #print "WTF"
+            enemyCheck()
+        else:
+            text ("PAUSED", 400,400, 50)    
         
         drawStuff()
-       
+        
     
     elif state == 2:
         drawStuff()
