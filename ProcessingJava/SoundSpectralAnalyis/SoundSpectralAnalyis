@@ -1,0 +1,104 @@
+
+
+// This sketch shows how to use the FFT class to analyze a stream  
+// of sound. Change the variable bands to get more or less 
+// spectral bands to work with. Smooth_factor determines how
+// much the signal will be smoothed on a scale form 0-1.
+
+import processing.sound.*;
+import java.util.ArrayList;
+// Declare the processing sound variables 
+SoundFile sample;
+
+SinOsc[] tones; 
+FFT fft;
+AudioDevice device;
+AudioIn soundIn;
+
+// Declare a scaling factor
+int scale=5;
+int zoom =10;
+int bottomBorder = 50;
+// Define how many FFT bands we want
+int bands = 1024;
+int numTones = 4;
+float mainAmp = 0;
+float mainFreq = 0;
+// declare a drawing variable for calculating rect width
+float r_width;
+
+// Create a smoothing vector
+float[] sum = new float[bands];
+
+// Create a smoothing factor
+float smooth_factor = 0.2;
+
+public void setup() {
+  size(800, 600);
+  background(255);
+  strokeWeight(r_width);
+  // If the Buffersize is larger than the FFT Size, the FFT will fail
+  // so we set Buffersize equal to bands
+  device = new AudioDevice(this, 44000, bands);
+  
+  // Calculate the width of the rects depending on how many bands we have
+  r_width = zoom*width/float(bands);
+  strokeWeight(r_width);  
+  //Load and play a soundfile and loop it. This has to be called 
+  // before the FFT is created.
+//  sample = new SoundFile(this, "beat.aiff");
+//  sample.loop();
+  tones = new SinOsc[numTones];
+  for (int i = 0; i < numTones; i++){
+    tones[i] = new SinOsc(this);
+    tones[i].freq(10);
+    tones[i].play();
+  }
+  
+  soundIn = new AudioIn(this, 0);
+  // Create and patch the FFT analyzer
+  fft = new FFT(this, bands);
+      soundIn.start();
+  fft.input(soundIn);
+ // input.
+      // start the Audio Input
+
+}      
+
+public void draw() {
+  // Set background color, noStroke and fill color
+  background(125,255,125);
+  
+  noStroke();
+
+  fft.analyze();
+  for (int i = 0; i < bands/zoom; i++) {
+   if (fft.spectrum[i] > mainAmp){
+      mainAmp = fft.spectrum[i];
+      mainFreq = i;
+   }
+    // smooth the FFT data by smoothing factor
+   sum[i] += (fft.spectrum[i] - sum[i]) * smooth_factor;
+    fill(2*i,0,255-2*i);  
+    // draw the rects with a scale factor
+    rect( i*r_width, height, r_width, -sum[i]*height*scale-bottomBorder , 3);
+    //fill(50,100);
+    //rect(0,height - bottomBorder,r_width*i,bottomBorder);
+    if (i%5 ==0){
+    pushMatrix();
+    translate(i*r_width,height-bottomBorder*0.5);
+    rotate(PI/2);
+    
+    fill(225);
+    text(""+i*r_width, 0,0);
+    popMatrix();
+    }
+  }
+     System.out.println("mainFreq"+mainFreq*zoom + ", "+mainAmp );
+  
+  for (int i = 0; i < tones.length; i ++){
+     tones[i].freq((i+2)*mainFreq);
+     System.out.println(""+(i+2)*mainFreq+ ", "+mainAmp*pow(0.8,(float)i) );
+     tones[i].amp(mainAmp*pow(0.4,(float)i));
+  }
+}
